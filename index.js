@@ -4,7 +4,7 @@ require("dotenv").config();
 const URL = require("url").URL;
 const fetch = require('node-fetch');
 
-function getUrl(path, queryParams) {
+function buildUrl(path, queryParams) {
     const url = new URL(process.env.API_URL);
     url.pathname = "/" + process.env.API_VERSION + path;
     url.searchParams.append("api_key", process.env.API_KEY);
@@ -14,17 +14,9 @@ function getUrl(path, queryParams) {
     return url;
 }
 
-async function apiSeriesSearch(query) {
-    const url = getUrl("/search/tv", {query});
-    const response = await fetch(url);
-    return response.json();
-}
-
-async function apiSeriesInfo(id) {
-    const url = getUrl("/tv/" + id);
-    const response = await fetch(url);
-    return response.json();
-}
+const api = async (path, params) => (await fetch(buildUrl(path, params))).json();
+const apiSeriesSearch = (query) => api("/search/tv", {query});
+const apiSeriesInfo = id => api("/tv/" + id);
 
 function formatEpisodeNumber(season, episode) {
     const s = season.toString().padStart(2, "0");
@@ -66,7 +58,7 @@ async function main(shows) {
             const last = data.last_episode_to_air;
             if (last) {
                 const last_nr = formatEpisodeNumber(last.season_number, last.episode_number);
-                console.log(`  - last epsiode to air: ${last_nr} on ${formatDate(last.air_date)}`);
+                console.log(`  - last episode to air: ${last_nr} on ${formatDate(last.air_date)}`);
             }
             const next = data.next_episode_to_air;
             if (next) {

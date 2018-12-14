@@ -80,4 +80,4 @@ async function main(shows) {
 
 // process state.json
 const state = require("./state.json");
-main(state.shows).then(() => console.log("done"));
+main(state.shows);

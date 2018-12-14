@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "CLI tool to track release dates of upcoming episodes",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "author": "Jan Christoph Bernack <jc.bernack@gmail.com>",
   "license": "MIT",
   "repository": "github:jcbernack/tv-show-release-tracker",

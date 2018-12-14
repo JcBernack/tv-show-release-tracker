@@ -51,7 +51,7 @@ async function main(shows) {
             console.warn("unable to fetch data for", show);
             return;
         }
-        console.log(`${data.name} - ${data.id}`);
+        console.log(`${data.name} - ${data.id} - ${data.status}`);
         if (show.season && show.season >= data.number_of_seasons) {
             console.log("=> nothing new");
         } else {

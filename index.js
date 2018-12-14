@@ -1,0 +1,85 @@
+// API documentation https://developers.themoviedb.org/3/getting-started/introduction
+
+require("dotenv").config();
+const URL = require("url").URL;
+const fetch = require('node-fetch');
+
+function getUrl(path, queryParams) {
+	const url = new URL(process.env.API_URL);
+	url.pathname = "/" + process.env.API_VERSION + path;
+	url.searchParams.append("api_key", process.env.API_KEY);
+	if (queryParams) {
+		Object.keys(queryParams).forEach(key => url.searchParams.append(key, queryParams[key]));
+	}
+	return url;
+}
+
+async function apiSeriesSearch(query) {
+	const url = getUrl("/search/tv", { query: query });
+	const response = await fetch(url);
+	return response.json();
+}
+
+async function apiSeriesInfo(id) {
+	const url = getUrl("/tv/" + id);
+	const response = await fetch(url);
+	return response.json();
+}
+
+async function getItemId(item) {
+	// use id if given
+	if (item.id) return item.id;
+	// otherwise search using name
+	const searchResult = await apiSeriesSearch(item.name);
+	return searchResult.results[0].id;
+}
+
+function formatEpisodeNumber(season, episode) {
+	const s = season.toString().padStart(2, "0");
+	const e = episode.toString().padStart(2, "0");
+	return `s${s}e${e}`;
+}
+
+function formatDate(air_date) {
+	return new Date(air_date).toDateString();
+}
+
+async function handleItem(item) {
+	try {
+		// get series id
+		const id = await getItemId(item);
+		// get series
+		const data = await apiSeriesInfo(id);
+		// output dates
+		console.log(`${data.name} - ${id}`);
+		if (item.season && item.season >= data.number_of_seasons) {
+			console.log("=> nothing new");
+		} else {
+			const last = data.last_episode_to_air;
+			if (last) {
+				const last_nr = formatEpisodeNumber(last.season_number, last.episode_number);
+				console.log(`  - last epsiode to air: ${last_nr} on ${formatDate(last.air_date)}`);
+			}
+			const next = data.next_episode_to_air;
+			if (next) {
+				const next_nr = formatEpisodeNumber(next.season_number, next.episode_number);
+				console.log(`  - next episode to air: ${next_nr} on ${formatDate(next.air_date)}`);
+			}
+		}
+		console.log("");
+	} catch(ex) {
+		console.warn("error", ex);
+	}
+}
+
+async function main(items) {
+	for (let i = 0; i < items.length; i++) {
+		// process items synchronously to not mess up the order of the items
+		//TODO: process asynchronously while keeping the order
+		await handleItem(items[i]);
+	}
+}
+
+// process state.json
+const state = require("./state.json");
+main(state.items);

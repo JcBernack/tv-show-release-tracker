@@ -1,0 +1,24 @@
+{
+	"items": [
+		{ "name": "Vikings", "season": 0 },
+		{ "name": "Marco Polo", "season": 1 },
+		{ "name": "Outlander", "season": 1 },
+		{ "name": "The Walking Dead", "season": 0 },
+		{ "name": "iZombie", "season": 0 },
+		{ "name": "The Orville", "season": 1 },
+		{ "name": "Star Trek: Discovery", "season": 1 },
+		{ "name": "Game of Thrones", "season": 7 },
+		{ "name": "The Last Ship", "season": 4 },
+		{ "name": "Agents of Shield", "season": 5 },
+		{ "name": "Killjoys", "season": 4 },
+		{ "name": "Homeland", "season": 7 },
+		{ "name": "The Expanse", "season": 3 },
+		{ "name": "Altered Carbon", "season": 1 },
+		{ "name": "The Rookie", "season": 0 },
+		{ "name": "Dark Matter", "season": 3 },
+		{ "name": "Agent Carter", "season": 2 },
+		{ "name": "Banshee", "season": 4 },
+		{ "name": "Falling Skies", "season": 5 },
+		{ "name": "Heroes", "season": 4 }
+	]
+}

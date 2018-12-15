@@ -11,6 +11,7 @@
   "repository": "github:jcbernack/tv-show-release-tracker",
   "dependencies": {
     "columnify": "^1.5.4",
+    "commander": "^2.19.0",
     "dotenv": "^6.2.0",
     "node-fetch": "^2.3.0"
   }

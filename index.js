@@ -13,6 +13,10 @@ commander
     .option("-a, --all", "shows without new content will be hidden without this flag")
     .parse(process.argv);
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function buildUrl(path, queryParams) {
     const url = new URL(process.env.API_URL);
     url.pathname = "/" + process.env.API_VERSION + path;
@@ -22,7 +26,19 @@ function buildUrl(path, queryParams) {
 }
 
 //TODO: handle rate limiting here https://developers.themoviedb.org/3/getting-started/request-rate-limiting
-const api = async (path, params) => (await fetch(buildUrl(path, params))).json();
+const api = async (path, params) => {
+    const url = buildUrl(path, params);
+    let response;
+    while (true) {
+        response = await fetch(url);
+        if (response.status !== 429) break;
+        const delay = response.headers.get("retry-after");
+        console.warn(`rate limited, wait for ${delay}s`);
+        // add half a second to make sure we don't get blocked again
+        await sleep(delay * 1000 + 500);
+    }
+    return response.json();
+};
 const apiSeriesSearch = (query) => api("/search/tv", {query});
 const apiSeriesInfo = id => api("/tv/" + id);
 

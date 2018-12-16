@@ -8,26 +8,23 @@ const columnify = require("columnify");
 
 // define command line interface
 commander
-    .version("0.1.0")
     .option("-f, --file", "json file to process, defaults to ./state.json")
     .option("-a, --all", "shows without new content will be hidden without this flag")
     .parse(process.argv);
 
-const state = {
-    pending: 0,
-    queue: [],
-    backoff: null,
-    backoffDelay: 0,
-    done: 0,
-    total: 0,
-};
+let pending = 0;
+const queue = [];
+let backoff = null;
+let backoffDelay = 0;
+let done = 0;
+let total = 0;
 
 function printProgress() {
     process.stdout.clearScreenDown();
-    process.stdout.write(`progress ${state.done}/${state.total}`);
+    process.stdout.write(`progress ${done}/${total}`);
     process.stdout.write("  -  ");
-    process.stdout.write(`requests pending/queued ${state.pending}/${state.queue.length}`);
-    if (state.backoffDelay) process.stdout.write(` (rate limited, backing off for ${state.backoffDelay} seconds)`);
+    process.stdout.write(`requests pending/queued ${pending}/${queue.length}`);
+    if (backoffDelay) process.stdout.write(` (rate limited, backing off for ${backoffDelay} seconds)`);
     process.stdout.cursorTo(0);
 }
 
@@ -45,29 +42,29 @@ function buildUrl(path, queryParams) {
 }
 
 function setBackoff(seconds) {
-    if (state.backoff != null) return;
+    if (backoff != null) return;
     // add a second to make sure we don't get blocked again
     seconds++;
-    state.backoffDelay = seconds;
-    state.backoff = new Promise(resolve => setTimeout(() => {
-        state.backoff = null;
-        state.backoffDelay = 0;
+    backoffDelay = seconds;
+    backoff = new Promise(resolve => setTimeout(() => {
+        backoff = null;
+        backoffDelay = 0;
         return resolve();
     }, seconds * 1000));
 }
 
 const api = async (path, params) => {
-    if (state.pending >= process.env.API_CONCURRENT_REQUEST) {
+    if (pending >= process.env.API_CONCURRENT_REQUEST) {
         printProgress();
-        await new Promise(resolve => state.queue.push(resolve));
+        await new Promise(resolve => queue.push(resolve));
     }
-    state.pending++;
+    pending++;
     printProgress();
     const url = buildUrl(path, params);
     let response;
     while (true) {
         // wait if we are rate limited
-        if (state.backoff != null) await state.backoff;
+        if (backoff != null) await backoff;
         printProgress();
         // try to fetch data
         response = await fetch(url);
@@ -79,17 +76,17 @@ const api = async (path, params) => {
         }
         // try not to run into the rate limit
         const remaining = parseInt(response.headers.get("X-RateLimit-Remaining"));
-        if (remaining < state.pending) {
+        if (remaining < pending) {
             const reset = parseInt(response.headers.get("X-RateLimit-Reset"));
             const now = Date.now() / 1000 | 0;
             setBackoff(reset - now);
         }
         break;
     }
-    state.pending--;
+    pending--;
     printProgress();
-    if (state.queue.length) {
-        const resolve = state.queue.shift();
+    if (queue.length) {
+        const resolve = queue.shift();
         resolve();
     }
     return response.json();
@@ -109,7 +106,7 @@ function formatDate(air_date) {
 }
 
 async function printShowsTable(shows) {
-    state.total = shows.length;
+    total = shows.length;
     // fetch all shows
     const results = await Promise.all(shows.map(async show => {
         let data = null;
@@ -126,7 +123,7 @@ async function printShowsTable(shows) {
             print(ex);
             print();
         }
-        state.done++;
+        done++;
         printProgress();
         return {show, data};
     }));

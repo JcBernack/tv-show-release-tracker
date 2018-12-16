@@ -8,8 +8,9 @@ const columnify = require("columnify");
 
 // define command line interface
 commander
-    .option("-f, --file", "json file to process, defaults to ./state.json")
+    .option("-f, --file <path>", "json file to process, defaults to ./state.json")
     .option("-a, --all", "shows without new content will be hidden without this flag")
+    .option("-s, --show <name>", "query a single show by name")
     .parse(process.argv);
 
 let pending = 0;
@@ -163,7 +164,12 @@ async function printShowsTable(shows) {
     }));
 }
 
-// read given file
-const file = require(commander.file || "./state.json");
-// process contained shows
-printShowsTable(file.shows);
+if (commander.show) {
+    // query a single given show by name
+    printShowsTable([{name: commander.show, season: 0}])
+} else {
+    // read given file
+    const file = require(commander.file || "./state.json");
+    // query contained shows
+    printShowsTable(file.shows);
+}

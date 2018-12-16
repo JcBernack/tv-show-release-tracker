@@ -13,11 +13,27 @@ commander
     .option("-a, --all", "shows without new content will be hidden without this flag")
     .parse(process.argv);
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(() => {
-        console.log("sleep resolved");
-        return resolve();
-    }, ms));
+const state = {
+    pending: 0,
+    queue: [],
+    backoff: null,
+    backoffDelay: 0,
+    done: 0,
+    total: 0,
+};
+
+function printProgress() {
+    process.stdout.clearScreenDown();
+    process.stdout.write(`progress ${state.done}/${state.total}`);
+    process.stdout.write("  -  ");
+    process.stdout.write(`requests pending/queued ${state.pending}/${state.queue.length}`);
+    if (state.backoffDelay) process.stdout.write(` (rate limited, backing off for ${state.backoffDelay} seconds)`);
+    process.stdout.cursorTo(0);
+}
+
+function print(str) {
+    process.stdout.clearScreenDown();
+    process.stdout.write(str + "\n");
 }
 
 function buildUrl(path, queryParams) {
@@ -28,56 +44,52 @@ function buildUrl(path, queryParams) {
     return url;
 }
 
-//TODO: handle rate limiting here https://developers.themoviedb.org/3/getting-started/request-rate-limiting
-const concurrentRequests = 20;
-const queuedRequests = [];
-let pendingRequests = 0;
-let backoff = null;
-let i = 0;
+function setBackoff(seconds) {
+    if (state.backoff != null) return;
+    // add a second to make sure we don't get blocked again
+    seconds++;
+    state.backoffDelay = seconds;
+    state.backoff = new Promise(resolve => setTimeout(() => {
+        state.backoff = null;
+        state.backoffDelay = 0;
+        return resolve();
+    }, seconds * 1000));
+}
+
 const api = async (path, params) => {
-    const n = i++;
-    if (pendingRequests >= concurrentRequests) {
-        console.log(n, "paused");
-        await new Promise(resolve => queuedRequests.push(resolve));
-        console.log(n, "resuming");
+    if (state.pending >= process.env.API_CONCURRENT_REQUEST) {
+        printProgress();
+        await new Promise(resolve => state.queue.push(resolve));
     }
-    pendingRequests++;
+    state.pending++;
+    printProgress();
     const url = buildUrl(path, params);
     let response;
     while (true) {
         // wait if we are rate limited
-        if (backoff != null) {
-            console.log(n, "back off delay");
-            await backoff;
-        }
+        if (state.backoff != null) await state.backoff;
+        printProgress();
         // try to fetch data
         response = await fetch(url);
         // check if we are rate limited
-        if (response.status !== 429) {
-            const remaining = parseInt(response.headers.get("X-RateLimit-Remaining"));
-            console.log(n, "rate limit remaining", remaining);
-            if (remaining < pendingRequests && backoff == null) {
-                const reset = parseInt(response.headers.get("X-RateLimit-Reset"));
-                const now = Date.now() / 1000 | 0;
-                // add a second to make sure we don't get blocked again
-                const delay = 1 + reset - now;
-                console.log(n, `back off for ${delay}s`);
-                backoff = sleep(delay * 1000).then(() => backoff = null);
-            }
-            break;
+        if (response.status === 429) {
+            setBackoff(parseInt(response.headers.get("retry-after")));
+            printProgress();
+            continue;
         }
-        if (backoff == null) {
-            // add a second to make sure we don't get blocked again
-            const delay = 1 + parseInt(response.headers.get("retry-after"));
-            console.warn(n, `rate limit response, back off for ${delay}s`);
-            // set backoff promise which resolves after the given delay
-            backoff = sleep(delay * 1000).then(() => backoff = null);
+        // try not to run into the rate limit
+        const remaining = parseInt(response.headers.get("X-RateLimit-Remaining"));
+        if (remaining < state.pending) {
+            const reset = parseInt(response.headers.get("X-RateLimit-Reset"));
+            const now = Date.now() / 1000 | 0;
+            setBackoff(reset - now);
         }
+        break;
     }
-    console.log(n, `done, pending/queued ${pendingRequests}/${queuedRequests.length}`);
-    pendingRequests--;
-    if (queuedRequests.length) {
-        const resolve = queuedRequests.shift();
+    state.pending--;
+    printProgress();
+    if (state.queue.length) {
+        const resolve = state.queue.shift();
         resolve();
     }
     return response.json();
@@ -97,6 +109,7 @@ function formatDate(air_date) {
 }
 
 async function printShowsTable(shows) {
+    state.total = shows.length;
     // fetch all shows
     const results = await Promise.all(shows.map(async show => {
         let data = null;
@@ -109,10 +122,12 @@ async function printShowsTable(shows) {
             // get info on the show
             data = await apiSeriesInfo(show.id);
         } catch (ex) {
-            console.warn("unable to fetch data for", show);
-            console.warn(ex);
-            console.warn();
+            print(`unable to fetch data for ${show}`);
+            print(ex);
+            print();
         }
+        state.done++;
+        printProgress();
         return {show, data};
     }));
     // generate result data
@@ -143,7 +158,7 @@ async function printShowsTable(shows) {
     // sort by status
     // columns.sort((a, b) => a.status.localeCompare(b.status));
     // output as columns
-    console.log(columnify(columns, {
+    print(columnify(columns, {
         config: {
             id: {align: 'right'},
             seasons: {align: 'right'},
@@ -152,6 +167,6 @@ async function printShowsTable(shows) {
 }
 
 // read given file
-const state = require(commander.file || "./state.json");
+const file = require(commander.file || "./state.json");
 // process contained shows
-printShowsTable(state.shows);
+printShowsTable(file.shows);

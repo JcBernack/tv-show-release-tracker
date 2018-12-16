@@ -14,7 +14,10 @@ commander
     .parse(process.argv);
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(() => {
+        console.log("sleep resolved");
+        return resolve();
+    }, ms));
 }
 
 function buildUrl(path, queryParams) {
@@ -26,19 +29,60 @@ function buildUrl(path, queryParams) {
 }
 
 //TODO: handle rate limiting here https://developers.themoviedb.org/3/getting-started/request-rate-limiting
+const concurrentRequests = 20;
+const queuedRequests = [];
+let pendingRequests = 0;
+let backoff = null;
+let i = 0;
 const api = async (path, params) => {
+    const n = i++;
+    if (pendingRequests >= concurrentRequests) {
+        console.log(n, "paused");
+        await new Promise(resolve => queuedRequests.push(resolve));
+        console.log(n, "resuming");
+    }
+    pendingRequests++;
     const url = buildUrl(path, params);
     let response;
     while (true) {
+        // wait if we are rate limited
+        if (backoff != null) {
+            console.log(n, "back off delay");
+            await backoff;
+        }
+        // try to fetch data
         response = await fetch(url);
-        if (response.status !== 429) break;
-        const delay = response.headers.get("retry-after");
-        console.warn(`rate limited, wait for ${delay}s`);
-        // add half a second to make sure we don't get blocked again
-        await sleep(delay * 1000 + 500);
+        // check if we are rate limited
+        if (response.status !== 429) {
+            const remaining = parseInt(response.headers.get("X-RateLimit-Remaining"));
+            console.log(n, "rate limit remaining", remaining);
+            if (remaining < pendingRequests && backoff == null) {
+                const reset = parseInt(response.headers.get("X-RateLimit-Reset"));
+                const now = Date.now() / 1000 | 0;
+                // add a second to make sure we don't get blocked again
+                const delay = 1 + reset - now;
+                console.log(n, `back off for ${delay}s`);
+                backoff = sleep(delay * 1000).then(() => backoff = null);
+            }
+            break;
+        }
+        if (backoff == null) {
+            // add a second to make sure we don't get blocked again
+            const delay = 1 + parseInt(response.headers.get("retry-after"));
+            console.warn(n, `rate limit response, back off for ${delay}s`);
+            // set backoff promise which resolves after the given delay
+            backoff = sleep(delay * 1000).then(() => backoff = null);
+        }
+    }
+    console.log(n, `done, pending/queued ${pendingRequests}/${queuedRequests.length}`);
+    pendingRequests--;
+    if (queuedRequests.length) {
+        const resolve = queuedRequests.shift();
+        resolve();
     }
     return response.json();
 };
+
 const apiSeriesSearch = (query) => api("/search/tv", {query});
 const apiSeriesInfo = id => api("/tv/" + id);
 

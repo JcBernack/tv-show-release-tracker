@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // API documentation https://developers.themoviedb.org/3/getting-started/introduction
 
 require("dotenv").config();

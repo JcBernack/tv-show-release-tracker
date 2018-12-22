@@ -133,26 +133,19 @@ async function printShowsTable(shows) {
     // generate result data
     const columns = results
         .filter(({data}) => data)
-        .filter(({show, data}) => commander.all || show.season < data.number_of_seasons)
         .map(({show, data}) => {
-            const output = {
+            const { last_episode_to_air: last, next_episode_to_air: next } = data;
+            return {
                 id: data.id,
                 name: data.name,
                 status: data.status,
+                new: show.season < (data.next_episode_to_air || data.last_episode_to_air).season_number ? "*" : "",
                 seasons: `${show.season ? show.season : "*"}/${data.number_of_seasons}`,
+                last: last && formatEpisodeNumber(last.season_number, last.episode_number) + " " + formatDate(last.air_date),
+                next: next && formatEpisodeNumber(next.season_number, next.episode_number) + " " + formatDate(next.air_date),
             };
-            const last = data.last_episode_to_air;
-            if (last) {
-                const last_nr = formatEpisodeNumber(last.season_number, last.episode_number);
-                output.last = `${last_nr} ${formatDate(last.air_date)}`;
-            }
-            const next = data.next_episode_to_air;
-            if (next) {
-                const next_nr = formatEpisodeNumber(next.season_number, next.episode_number);
-                output.next = `${next_nr} ${formatDate(next.air_date)}`;
-            }
-            return output;
-        });
+        })
+        .filter(output => commander.all || output.new);
     // sort by name
     columns.sort((a, b) => a.name.localeCompare(b.name));
     // sort by status

@@ -4,11 +4,17 @@
     { "name": "Agents of Shield", "season": 7 },
     { "name": "Altered Carbon", "season": 2 },
     { "name": "Black Lightning", "season": 1 },
+<<<<<<< HEAD
     { "name": "Bonding", "season": 1 },
 	{ "name": "Dark", "season": 3 },
     { "name": "Dark Matter", "season": 3 },
     { "name": "Designated Survivor", "season": 2 },
     { "name": "Disenchantment", "season": 1 },
+=======
+    { "id": 70523, "name": "Dark", "season": 2 },
+    { "name": "Dark Matter", "season": 3 },
+    { "name": "Designated Survivor", "season": 2 },
+>>>>>>> 89a3ea021576757925387e5b903c0b74763c7032
     { "name": "Final Space", "season": 2 },
     { "name": "Game of Thrones", "season": 8 },
     { "name": "Haus des Geldes", "season": 0 },
@@ -18,9 +24,15 @@
     { "name": "Killjoys", "season": 5 },
     { "name": "Marco Polo", "season": 1 },
     { "name": "Outlander", "season": 1 },
+<<<<<<< HEAD
     { "name": "Penny Dreadful", "season": 3 },
     { "name": "Rick and Morty", "season": 4 },
     { "name": "Star Trek Discovery", "season": 3 },
+=======
+    { "name": "Penny Dreadful", "season": 1 },
+    { "name": "Rick and Morty", "season": 3 },
+    { "name": "Star Trek Discovery", "season": 2 },
+>>>>>>> 89a3ea021576757925387e5b903c0b74763c7032
     { "name": "Stranger Things", "season": 3 },
     { "name": "Tom Clancys Jack Ryan", "season": 1 },
     { "name": "The 100", "season": 6 },
@@ -28,9 +40,13 @@
     { "name": "The Last Kingdom", "season": 4 },
     { "name": "The Last Ship", "season": 5 },
     { "name": "The Man in the High Castle", "season": 1 },
+<<<<<<< HEAD
     { "name": "The Mandalorian", "season": 1 },
     { "name": "The Orville", "season": 2 },
     { "name": "The Punisher", "season": 2 },
+=======
+    { "name": "The Orville", "season": 2 },
+>>>>>>> 89a3ea021576757925387e5b903c0b74763c7032
     { "name": "The Rookie", "season": 1 },
     { "name": "The Walking Dead", "season": 0 },
     { "name": "The Witcher", "season": 1 },
